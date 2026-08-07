@@ -1,9 +1,9 @@
 fastapi==0.141.1
 uvicorn==0.52.1
 python-multipart==0.0.32
-ultralytics==8.4.115
-opencv-python-headless
 numpy==2.4.4
 pillow==12.2.0
+opencv-python-headless
 torch
 torchvision
+ultralytics
