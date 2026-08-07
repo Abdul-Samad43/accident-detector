@@ -1,9 +1,7 @@
-fastapi==0.141.1
-uvicorn==0.52.1
-python-multipart==0.0.32
-numpy==2.4.4
-pillow==12.2.0
-opencv-python-headless
-torch
-torchvision
+fastapi
+uvicorn
+python-multipart
 ultralytics
+opencv-python-headless
+numpy
+pillow
