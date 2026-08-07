@@ -38,3 +38,7 @@ async def detect(file: UploadFile = File(...)):
         "accident_detected": is_accident,
         "accident_pairs": len(pairs)
     }
+    
+@app.get("/")
+def home():
+    return {"status": "backend running"}
