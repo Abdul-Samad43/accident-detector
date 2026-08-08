@@ -1,20 +1,24 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import shutil
-import os 
 from accident_detector import load_model, get_vehicle_boxes, detect_accident
 from PIL import Image
-import io
+import shutil, os, io
 
-app  = FastAPI()
+app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-from PIL import Image
-import io
+
+# Yeh BAHAR hona chahiye — global level pe
+model = load_model("yolo11n.pt")
+
+@app.get("/")
+def home():
+    return {"status": "backend running"}
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
@@ -35,6 +39,3 @@ async def detect(file: UploadFile = File(...)):
         }
     except Exception as e:
         return {"error": str(e)}
-@app.get("/")
-def home():
-    return {"status": "backend running"}
