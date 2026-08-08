@@ -38,7 +38,7 @@ def calculate_iou(box1, box2):
     
     return inter_area / union_area
 
-def detect_accident(boxes, iou_threshold=0.15):
+def detect_accident(boxes, iou_threshold=0.4):
     if len(boxes) < 2:
         return False, []
     
