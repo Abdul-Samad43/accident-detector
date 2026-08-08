@@ -1,68 +1,53 @@
 from ultralytics import YOLO
+import cv2
 
-VEHICLE_CLASSES = ["car", "motorcycle", "bus", "truck"]
+VEHICLE_CLASSES = [2, 3, 5, 7]  
 
-def load_model():
-    return YOLO("yolo11n.pt")
+def load_model(model_path="yolo11n.pt"):
+    model = YOLO(model_path)
+    return model
 
-
-def get_vehicle_boxes(model, image_path):
-    results = model(image_path, conf=0.35, verbose=False)
+def get_vehicle_boxes(results):
     boxes = []
-
-    for box in results[0].boxes:
-        cls_id = int(box.cls[0])
-        conf = float(box.conf[0])
-        label = results[0].names[cls_id]
-
-        if label in VEHICLE_CLASSES:
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            boxes.append({
-                "label": label,
-                "confidence": round(conf, 2),
-                "box": [x1, y1, x2, y2]
-            })
-
+    for result in results:
+        for box in result.boxes:
+            class_id = int(box.cls[0])
+            confidence = float(box.conf[0])
+            
+            if class_id in VEHICLE_CLASSES and confidence > 0.4:
+                coords = box.xyxy[0].tolist()
+                boxes.append(coords)
     return boxes
 
-
 def calculate_iou(box1, box2):
-    x1, y1, x2, y2 = box1
-    a1, b1, a2, b2 = box2
+    inter_x1 = max(box1[0], box2[0])
+    inter_y1 = max(box1[1], box2[1])
+    inter_x2 = min(box1[2], box2[2])
+    inter_y2 = min(box1[3], box2[3])
+    
+    inter_width = inter_x2 - inter_x1
+    inter_height = inter_y2 - inter_y1
+    
+    if inter_width <= 0 or inter_height <= 0:
+        return 0.0
+    
+    inter_area = inter_width * inter_height
+    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
+    union_area = area1 + area2 - inter_area
+    
+    return inter_area / union_area
 
-    inter_x1 = max(x1, a1)
-    inter_y1 = max(y1, b1)
-    inter_x2 = min(x2, a2)
-    inter_y2 = min(y2, b2)
-
-    inter_w = max(0, inter_x2 - inter_x1)
-    inter_h = max(0, inter_y2 - inter_y1)
-    inter_area = inter_w * inter_h
-
-    area1 = (x2 - x1) * (y2 - y1)
-    area2 = (a2 - a1) * (b2 - b1)
-
-    union = area1 + area2 - inter_area
-
-    if union == 0:
-        return 0
-
-    return inter_area / union
-
-
-def detect_accident(boxes):
-    # single vehicle = no accident
+def detect_accident(boxes, iou_threshold=0.15):
     if len(boxes) < 2:
         return False, []
-
+    
     accident_pairs = []
-
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
-            iou = calculate_iou(boxes[i]["box"], boxes[j]["box"])
-
-            # only clear overlap means accident
-            if iou > 0.12:
+            iou = calculate_iou(boxes[i], boxes[j])
+            if iou > iou_threshold:
                 accident_pairs.append((boxes[i], boxes[j]))
 
-    return len(accident_pairs) > 0, accident_pairs
+    is_accident = len(accident_pairs) > 0
+    return is_accident, accident_pairs
