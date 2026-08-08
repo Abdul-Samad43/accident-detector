@@ -13,8 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Yeh BAHAR hona chahiye — global level pe
-model = load_model("yolo11n.pt")
+model = load_model()
 
 @app.get("/")
 def home():
