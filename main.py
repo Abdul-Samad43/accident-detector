@@ -44,7 +44,7 @@ async def detect(file: UploadFile = File(...)):
 
     except Exception as e:
         return {
-            "error": str(e),
-            "accident_detected": False,
-            "vehicles_detected": 0
-        }
+    "accident_detected": is_accident,
+    "vehicles_detected": len(boxes),
+    "boxes": boxes
+}
