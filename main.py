@@ -2,7 +2,9 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from accident_detector import load_model, get_vehicle_boxes, detect_accident
 from PIL import Image
-import shutil, os, io
+import os
+import io
+import uuid
 
 app = FastAPI()
 
@@ -23,18 +25,26 @@ def home():
 async def detect(file: UploadFile = File(...)):
     try:
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents))
+
+        image = Image.open(io.BytesIO(contents)).convert("RGB")
         image = image.resize((640, 640))
-        file_path = f"temp_{file.filename}"
+
+        file_path = f"temp_{uuid.uuid4().hex}.jpg"
         image.save(file_path)
-        results = model(file_path)
-        boxes = get_vehicle_boxes(results)
+
+        boxes = get_vehicle_boxes(model, file_path)
         is_accident, pairs = detect_accident(boxes)
+
         os.remove(file_path)
+
         return {
-            "vehicles_detected": len(boxes),
             "accident_detected": is_accident,
-            "accident_pairs": len(pairs)
+            "vehicles_detected": len(boxes)
         }
+
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": str(e),
+            "accident_detected": False,
+            "vehicles_detected": 0
+        }

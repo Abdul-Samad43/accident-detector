@@ -1,4 +1,5 @@
 from ultralytics import YOLO
+import math
 
 VEHICLE_CLASSES = ["car", "motorcycle", "bus", "truck"]
 
@@ -7,7 +8,7 @@ def load_model():
 
 
 def get_vehicle_boxes(model, image_path):
-    results = model(image_path, conf=0.50, verbose=False)
+    results = model(image_path, conf=0.20, verbose=False)
 
     boxes = []
 
@@ -16,7 +17,7 @@ def get_vehicle_boxes(model, image_path):
         conf = float(box.conf[0])
         label = results[0].names[cls_id]
 
-        if label in VEHICLE_CLASSES and conf >= 0.50:
+        if label in VEHICLE_CLASSES:
             x1, y1, x2, y2 = box.xyxy[0].tolist()
 
             boxes.append({
@@ -37,9 +38,10 @@ def calculate_iou(box1, box2):
     inter_x2 = min(x2, a2)
     inter_y2 = min(y2, b2)
 
-    inter_width = max(0, inter_x2 - inter_x1)
-    inter_height = max(0, inter_y2 - inter_y1)
-    inter_area = inter_width * inter_height
+    inter_w = max(0, inter_x2 - inter_x1)
+    inter_h = max(0, inter_y2 - inter_y1)
+
+    inter_area = inter_w * inter_h
 
     box1_area = (x2 - x1) * (y2 - y1)
     box2_area = (a2 - a1) * (b2 - b1)
@@ -52,6 +54,18 @@ def calculate_iou(box1, box2):
     return inter_area / union_area
 
 
+def center_distance(box1, box2):
+    x1, y1, x2, y2 = box1
+    a1, b1, a2, b2 = box2
+
+    c1x = (x1 + x2) / 2
+    c1y = (y1 + y2) / 2
+    c2x = (a1 + a2) / 2
+    c2y = (b1 + b2) / 2
+
+    return math.sqrt((c1x - c2x) ** 2 + (c1y - c2y) ** 2)
+
+
 def detect_accident(boxes):
     if len(boxes) < 2:
         return False, []
@@ -60,12 +74,23 @@ def detect_accident(boxes):
 
     for i in range(len(boxes)):
         for j in range(i + 1, len(boxes)):
-            iou = calculate_iou(boxes[i]["box"], boxes[j]["box"])
+            box1 = boxes[i]["box"]
+            box2 = boxes[j]["box"]
 
-            if iou > 0.20:
+            iou = calculate_iou(box1, box2)
+            distance = center_distance(box1, box2)
+
+            x1, y1, x2, y2 = box1
+            a1, b1, a2, b2 = box2
+
+            w1 = x2 - x1
+            h1 = y2 - y1
+            w2 = a2 - a1
+            h2 = b2 - b1
+
+            size_limit = (w1 + h1 + w2 + h2) * 0.25
+
+            if iou > 0.03 or distance < size_limit:
                 accident_pairs.append((boxes[i], boxes[j]))
 
-    if len(accident_pairs) > 0:
-        return True, accident_pairs
-
-    return False, []
+    return len(accident_pairs) > 0, accident_pairs
