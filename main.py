@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os 
 from accident_detector import load_model, get_vehicle_boxes, detect_accident
+from PIL import Image
+import io
 
 app  = FastAPI()
 app.add_middleware(
@@ -26,25 +28,15 @@ async def detect(file: UploadFile = File(...)):
 model = load_model("yolo11n.pt")
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
-    
-    # Upload ki hui image save karo
+    contents = await file.read()
+    image = Image.open(io.BytesIO(contents))
+    image = image.resize((640, 640))
     file_path = f"temp_{file.filename}"
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    # YOLO chalao
+    image.save(file_path)
     results = model(file_path)
-    
-    # Vehicles nikalo
     boxes = get_vehicle_boxes(results)
-    
-    # Accident check karo
     is_accident, pairs = detect_accident(boxes)
-    
-    # Temp file delete karo
     os.remove(file_path)
-    
-    # Result return karo
     return {
         "vehicles_detected": len(boxes),
         "accident_detected": is_accident,
