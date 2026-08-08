@@ -18,31 +18,23 @@ import io
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
-    image = Image.open(file.file)
-    image = image.resize((640, 640))
-    
-    file_path = f"temp_{file.filename}"
-    image.save(file_path)
-    
-    results = model(file_path)
-model = load_model("yolo11n.pt")
-@app.post("/detect")
-async def detect(file: UploadFile = File(...)):
-    contents = await file.read()
-    image = Image.open(io.BytesIO(contents))
-    image = image.resize((640, 640))
-    file_path = f"temp_{file.filename}"
-    image.save(file_path)
-    results = model(file_path)
-    boxes = get_vehicle_boxes(results)
-    is_accident, pairs = detect_accident(boxes)
-    os.remove(file_path)
-    return {
-        "vehicles_detected": len(boxes),
-        "accident_detected": is_accident,
-        "accident_pairs": len(pairs)
-    }
-    
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents))
+        image = image.resize((640, 640))
+        file_path = f"temp_{file.filename}"
+        image.save(file_path)
+        results = model(file_path)
+        boxes = get_vehicle_boxes(results)
+        is_accident, pairs = detect_accident(boxes)
+        os.remove(file_path)
+        return {
+            "vehicles_detected": len(boxes),
+            "accident_detected": is_accident,
+            "accident_pairs": len(pairs)
+        }
+    except Exception as e:
+        return {"error": str(e)}
 @app.get("/")
 def home():
     return {"status": "backend running"}
