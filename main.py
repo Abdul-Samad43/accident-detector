@@ -11,6 +11,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from PIL import Image
+import io
+
+@app.post("/detect")
+async def detect(file: UploadFile = File(...)):
+    image = Image.open(file.file)
+    image = image.resize((640, 640))
+    
+    file_path = f"temp_{file.filename}"
+    image.save(file_path)
+    
+    results = model(file_path)
 model = load_model("yolo11n.pt")
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
